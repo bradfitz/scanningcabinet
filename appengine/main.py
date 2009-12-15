@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 #
-# Copyright 2009 Google Inc.
+# scanningcabinet's AppEngine server-side code.
+#
+# Copyright 2009 Brad Fitzpatrick <brad@danga.com>
+# Copyright 2009 Google Inc. (sample app that scanningcabinet is based on)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
