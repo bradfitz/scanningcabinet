@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}{{doc.title}} -- document {{doc.key.id}}{% endblock %}
+
+{% block preamble %}
+{% endblock %}
+
+{% block main_body %}
+<h2><img src="http://www.gstatic.com/codesite/ph/images/star_off.gif" width=15 height=15 /> 
+    {% if doc.title_or_empty_string %}
+       {{doc.title_or_empty_string|escape}}
+    {% else %}
+       Document {{doc.key.id}}
+    {% endif %}
+</h2>
+<form method='POST' action='/changedoc'>
+<input type='hidden' name='docid' value='{{doc.key.id}}' />
+<table>
+  <tr><td align='right'>Title</td><td><input name='title' value="{{doc.title_or_empty_string|escape}}" size=80 /></td></tr>
+  <tr><td align='right'>Tags</td><td><input name='tags' value="{{doc.tag_comma_separated|escape}}" size=80/></td></tr>
+  <tr><td align='right'>Doc Date</td><td><input name='date' value="{{doc.date_yyyy_mm_dd}}" maxlength=10 /> (yyyy-mm-dd)</td></tr>
+  <tr><td align='right'>Due Date</td><td><input name='due_date' value="{{doc.due_yyyy_mm_dd}}" maxlength=10 /> (yyyy-mm-dd)</td></tr>
+  <tr><td align='right'>Location</td>
+      <td><input name='physical_location'
+           value="{% if doc.physical_location %}{{doc.physical_location|escape}}{% endif %}" size=60 />
+           (of physical document)</td>
+  </tr>
+  <tr><td></td><td><input type='submit' value="Save" /></tr>
+</table>
+</form>
+
+  {% if show_single_list %}
+    <center>
+      {% for page in pages %}
+        *<br/>
+        <img src="{{page.url_resize}}{{size}}" /><br/>
+      {% endfor %}
+    </center>
+  {% else %}
+      {% for page in pages %}
+        <img src="{{page.url_resize}}{{size}}" />
+      {% endfor %}
+  {% endif %}
+{% endblock %}

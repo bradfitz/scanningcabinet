@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Scanning Cabinet{% endblock %}
+
+{% block preamble %}
+    {% if top_message %}
+      <center><span style='background: #ffc; padding: 0.5em'>{{top_message}}</span></center>
+    {% endif %}
+  <h1 align="center">
+  {% if view_user %}
+    {% ifequal view_user.key user_info.key %}
+      Scanning Cabinet
+    {% else %}
+      {{view_user.user.email|escape}}'s media
+    {% endifequal %}
+  {% else %}
+    Scanning Cabinet
+  {% endif %}
+  </h1>
+{% endblock %}
+
+{% block main_body %}
+
+<h2>Documents</h2>
+<form method='GET'>
+<div>Tag search: <input type='text' size='50' name='tags' /> <input type='submit' value='Search' /> (comma-separated union)</div>
+
+</form>
+
+{% if docs %}
+    <ul>
+    {% for doc in docs %}
+      <li><b>
+        <a href="{{doc.display_url}}">"{{doc.some_title}}" -</a>
+      </b> {{doc.description}}
+      </li>
+    {% endfor %}
+    </ul>
+{% else %}
+
+<p><i>(tag cloud here?)</i></p>
+
+{% endif %}
+
+<!---- Upcoming due documents --->
+{% if upcoming_due_docs %}
+<h2>Upcoming Due Documents</h2>
+
+    <ul>
+    {% for doc in upcoming_due_docs %}
+      <li><b>{{doc.due_yyyy_mm_dd}}</b> -- 
+        <a href="{{doc.display_url}}">"{{doc.some_title}}" -</a>
+      </b> {{doc.description}}
+      </li>
+    {% endfor %}
+    </ul>
+
+{%  endif %}
+<!---- /Upcoming due docs --->
+
+<!---- Docs without tags --->
+{% if untagged_docs %}
+<h2>Untagged Documents</h2>
+
+    <ul>
+    {% for doc in untagged_docs %}
+      <li><b>
+        <a href="{{doc.display_url}}">"{{doc.some_title}}" -</a>
+      </b> {{doc.description}}
+      </li>
+    {% endfor %}
+    </ul>
+
+{%  endif %}
+<!---- /Docs without tags --->
+
+<h2>Un-annotated raw scans</h2>
+  {% if media %}
+    <form method='POST' action='/makedoc' />
+    <input type='submit' value='Make doc from selected' />
+    <div id='scans'>
+    {% for item in media %}
+      <div style='margin: 1em; float:left; height: auto'>
+        <div style='display: block'>
+          <input type='checkbox' id='check_{{item.key.id}}' name="media_id" value="{{item.key}}" />
+          [<a target=_blank href="{{item.url_resize}}800">larger</a>]<br/>
+          <label for='check_{{item.key.id}}'><img src="{{item.thumb_url}}" /></label>
+        </div>
+      </div>
+    {% endfor %}
+    </div> <!-- scans -->
+    </form>
+  {% else %}
+      No raw scans to tag.
+  {% endif %}
+
+{% endblock %}

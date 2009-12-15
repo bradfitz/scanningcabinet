@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}MediaStore Upload{% endblock %}
+
+{% block main_body %}
+  <form action="{{upload_url}}" method="POST" enctype="multipart/form-data">
+      Sharing: <select name="share">
+        <option value="private">Private</option>
+        <option value="public">Public</option>
+      </select>
+      Title: <input type="text" size="40" name="title"><br>
+      Description:<br>
+      <textarea cols="80" rows="20" name="description"></textarea><br>
+      Upload File: <input type="file" name="file"><br>
+      <input type="submit" name="submit" value="Submit">
+  </form>
+
+  <hr>
+  <a href="/">Cancel</a>
+{% endblock %}

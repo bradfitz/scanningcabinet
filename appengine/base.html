@@ -1,0 +1,41 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
+   "http://www.w3.org/TR/html4/strict.dtd">
+
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>{% block title %}Title{% endblock %}</title>
+  <!-- Date: 2008-12-30 -->
+</head>
+<body>
+  <div align="right" style='float: right'>
+    {% if user_info %}
+      {{user_info.user.email}}!
+    {% endif %}
+
+    <a href="{{login_url}}">
+    {% if user_info %}
+      Log out
+    {% else %}
+      Log in
+    {% endif %}
+    </a>
+  </div>
+  <div>[<a href='/'>Scanning Cabinet</a>]</div>
+
+  {% block preamble %}
+  {% endblock %}
+
+  {% if error_messages %}
+  <ul>
+    {% for message in error_messages %}
+    <li style="color: red">{{message|escape}}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% block main_body %}
+  Empty
+  {% endblock %}
+</body>
+</html>

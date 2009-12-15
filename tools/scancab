@@ -1,0 +1,192 @@
+#!/usr/bin/perl
+#
+# Author: Brad Fitzpatrick <brad@danga.com>
+#
+# You'll need Debian packages curl, sane-utils, sane, scanadf, some
+# perl stuff, etc.  I kinda expect you to modify this to suit your
+# needs.  I wrote it for me.  This is hacky and I don't offer support.
+# I do, however, accept gushing emails of full of love.
+#
+# Basic usage:
+#
+#   (Load scanner full of documents)
+#   $ scancab --adf
+#   $ scancab --adf --color
+#   $ scancab --adf --lineart
+#
+#   Those commands above just write to the queue directory.
+#   Make sure you mkdir ~/scancab-queue
+#
+#   (But run this in the background in another terminal,
+#    which does the actual potentially-slow uploads, making
+#    sure to do them in the right creation order, doing retries,
+#    etc....)
+#   $ scancab --loop
+#
+#   (Upload a certain document, but don't delete it...)
+#   $ scancab --upload=foo.jpg
+#
+
+use strict;
+use LWP::Simple;
+use Getopt::Long;
+
+my $URL = "http://localhost:8080";
+my $EMAIL = "$ENV{USER}\@gmail.com";  # uh, works for me. :)
+my $PASSWORD = "mypass";
+
+my $uploader_pid_file = "";
+my $queue_dir = "$ENV{HOME}/scancab-queue/";
+
+# Detect when we're the helper program (--scan-script) to scanadf,
+# which we run in --adf batch mode.  (this script functions as both
+# the driver and the helper)
+if ($ENV{'SCAN_RES'} || $ENV{'SCAN_FORMAT_ID'}) {
+    be_batch_scan_script();
+    exit(0);
+}
+
+my $upload_loop = 0;
+
+my $adf = 0;
+
+my $upload_file;
+my $color = 0;
+my $lineart = 0;
+my $appid = $ENV{'SCANCAB_APPID'};
+
+die unless GetOptions(
+    "appid" => \$appid,
+
+    # Upload this file, don't delete it, then exit.
+    "upload=s" => \$upload_file,
+
+    # Loop, looking in $queue_dir 
+    "loop" => \$upload_loop, 
+
+    # Use the auto-document-feeder.
+    "adf" => \$adf,
+
+    # Mutually exclusive:
+    "color" => \$color,
+    "lineart" => \$lineart,
+    );
+
+die "Can't do both color and lineart.\n" if $color && $lineart;
+
+die "appid parameter must be just an appengine appid"
+    if $appid && $appid !~ /^\w+$/;
+
+if ($appid) {
+    $URL = "https://$appid.appspot.com";
+} else {
+    warn "No $ENV{'SCANCAB_APPID'} or --appid specified.  Using dev $URL ...\n";
+}
+
+if ($upload_loop) {
+    chdir($queue_dir) or die "Failed to chdir to queue directory $queue_dir.\n";
+    while (1) {
+        opendir(my $dh, ".") or die;
+        my %create_time;
+        my @files = grep { /^image-.+-unx(\d+)\.(png|jpg)$/ && ($create_time{$_} = $1) } readdir($dh);
+        @files = sort { $create_time{$a} <=> $create_time{$b} } @files;
+        closedir($dh);
+        foreach my $file (@files) {
+            if (upload_file($file)) {
+                unlink($file);
+            }
+        }
+        use Data::Dumper;
+        print Dumper(\%create_time);
+        sleep 1;
+    }
+}
+
+if ($upload_file) {
+    die "File $upload_file doesn't exist.\n" unless -e $upload_file;
+    print "Uploading $upload_file ...\n";
+    if (!upload_file($upload_file)) {
+        die "Failed to upload.\n";
+    }
+    exit(0);
+}
+
+my $scan = 1;   # implicit default mode, for now.
+
+if ($scan) {
+    my %seen;
+    opendir(D, ".") or die;
+    my @files = readdir(D);
+    foreach my $f (@files) {
+        $seen{$f} = 1 if $f =~ /^image-\d\d\d\d/;
+    }
+
+    my $n = 1;
+    my $base = sprintf("image-%04d", $n);
+    while ($seen{$base} ||
+           $seen{"$base.tiff"} ||
+           $seen{"$base.jpg"} ||
+           $seen{"$base.png"}) {
+        $n++;
+        $base = sprintf("scan%04d", $n);
+    }
+    my $tiff = "$base.tiff";
+
+    my $mode = $lineart ? "Lineart" : ($color ? "Color" : "Gray");
+    if ($adf) {
+        system("scanadf --mode $mode --resolution 300 " .
+               "  --scan-script $0 " .
+               "  --batch-scan=yes -s $n") and die "Failed to batch scan.";
+    } else {
+        system("scanimage --mode $mode --resolution 300 --format tiff > $tiff")
+            and die "Failed to scan.";
+
+        my $out = $lineart ? "$base.png" : "$base.jpg";
+        print "Scanned.  Converting $tiff -> $out\n";
+        system("convert", "-quality", "90", $tiff, $out)
+            and die "failed to convert.\n";
+        unlink($tiff) or die "Failed to unlink $tiff: $!";
+        if (!upload($out)) {
+            die "Failed to upload $out.\n";
+        }
+        unlink($out);
+    }
+    exit(0);
+}
+
+sub upload_file {
+    my $file = shift;
+    print "Fetching upload URL (for $file) ...\n";
+    my $url_to_get_an_upload_url = "$URL/uploadurl?" .
+        "user_email=$EMAIL&password=$PASSWORD";
+    print "Getting an upload URL from: $url_to_get_an_upload_url\n";
+    my $upload_url = get($url_to_get_an_upload_url);
+    die "Didn't get URL.  Wrong password?\n\nGot: $upload_url\n"
+        unless $upload_url =~ /^http.+/;
+    chomp $upload_url;
+    print "Uploading to: $upload_url ...\n";
+    my $rv = system("curl",
+                    "-F", "file=\@$file",
+                    "-F", "password=$PASSWORD",
+                    "-F", "user_email=$EMAIL",
+                    $upload_url);
+    return $rv == 0;
+}
+
+sub be_batch_scan_script {
+    die "Expected $1 to be image-nnnn" unless $ARGV[0] =~ m!\bimage-\d\d\d\d$!;
+    die "No SCAN_FORMAT\n" unless $ENV{SCAN_FORMAT};
+    my $filebase = $&;
+    print "[$$] Got format: $ENV{SCAN_FORMAT} for $filebase\n";
+
+    my $ext = "jpg";
+
+    my $now = time();
+    my $tmp_file  = "$queue_dir/$filebase-unx$now-TMP.$ext";
+    my $dest_file = "$queue_dir/$filebase-unx$now.$ext";
+    system("convert", "-quality", 95, $ARGV[0], $tmp_file)
+        and die "Failed to convert.";
+    rename($tmp_file, $dest_file) or die "Failed to rename $tmp_file to $dest_file: $!\n";
+    unlink($ARGV[0]);
+}
+
