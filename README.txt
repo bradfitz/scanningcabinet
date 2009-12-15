@@ -20,7 +20,7 @@ Problem statement:
    * I have a scanner.  My friend's scanner is better.  Borrowed that
      one.  It has a sheet feeder.
 
-   * App Engine now has a Blob API (http://bit.ly/8K4FxM)
+   * App Engine now has a Blob API: http://bit.ly/8K4FxM
 
    * It should be easy to get documents online.  Must minimize context
      switching between feeding the scanner and entering metadata.  In fact,
