@@ -56,7 +56,7 @@ my $lineart = 0;
 my $appid = $ENV{'SCANCAB_APPID'};
 
 die unless GetOptions(
-    "appid" => \$appid,
+    "appid=s" => \$appid,
 
     # Upload this file, don't delete it, then exit.
     "upload=s" => \$upload_file,
