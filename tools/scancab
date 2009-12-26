@@ -33,7 +33,7 @@ use Getopt::Long;
 
 my $URL = "http://localhost:8080";
 my $EMAIL = "$ENV{USER}\@gmail.com";  # uh, works for me. :)
-my $PASSWORD = "mypass";
+my $password = "";
 
 my $uploader_pid_file = "";
 my $queue_dir = "$ENV{HOME}/scancab-queue/";
@@ -54,12 +54,15 @@ my $upload_file;
 my $color = 0;
 my $lineart = 0;
 my $appid = $ENV{'SCANCAB_APPID'};
+my $upload_now = 0;
 
 die unless GetOptions(
     "appid=s" => \$appid,
+    "password=s" => \$password,
 
     # Upload this file, don't delete it, then exit.
     "upload=s" => \$upload_file,
+    "upload_now" => \$upload_now,  # don't queue
 
     # Loop, looking in $queue_dir 
     "loop" => \$upload_loop, 
@@ -77,10 +80,17 @@ die "Can't do both color and lineart.\n" if $color && $lineart;
 die "appid parameter must be just an appengine appid"
     if $appid && $appid !~ /^\w+$/;
 
-if ($appid) {
-    $URL = "https://$appid.appspot.com";
-} else {
-    warn "No $ENV{'SCANCAB_APPID'} or --appid specified.  Using dev $URL ...\n";
+# ADF mode doesn't need to upload (just drops stuff into a batch directory) so
+# don't need to setup URL or password in that case.
+unless ($adf) {
+    my $conf_dir = "$ENV{HOME}/.config/scanningcabinet";
+    $appid ||= slurp("$conf_dir/appid")
+        or warn "No appid configured in $conf_dir/appid; assuming $URL\n";
+    $password ||= slurp("$conf_dir/password")
+        or die "No password configured in args or in $conf_dir/password\n";
+    if ($appid) {
+        $URL = "https://$appid.appspot.com";
+    }
 }
 
 if ($upload_loop) {
@@ -91,14 +101,20 @@ if ($upload_loop) {
         my @files = grep { /^image-.+-unx(\d+)\.(png|jpg)$/ && ($create_time{$_} = $1) } readdir($dh);
         @files = sort { $create_time{$a} <=> $create_time{$b} } @files;
         closedir($dh);
-        foreach my $file (@files) {
-            if (upload_file($file)) {
-                unlink($file);
+        if (@files) {
+            my $failures;
+            foreach my $file (@files) {
+                if (upload_file($file)) {
+                    unlink($file);
+                } else {
+                    $failures = 1;
+                    print STDERR "# Upload error.  Sleeping for 5 seconds...\n";
+                    last;
+                }
             }
+            print "Uploads complete.  Waiting for new files.\n";
         }
-        use Data::Dumper;
-        print Dumper(\%create_time);
-        sleep 1;
+        sleep 5;
     }
 }
 
@@ -128,7 +144,7 @@ if ($scan) {
            $seen{"$base.jpg"} ||
            $seen{"$base.png"}) {
         $n++;
-        $base = sprintf("scan%04d", $n);
+        $base = sprintf("image-%04d", $n);
     }
     my $tiff = "$base.tiff";
 
@@ -146,10 +162,16 @@ if ($scan) {
         system("convert", "-quality", "90", $tiff, $out)
             and die "failed to convert.\n";
         unlink($tiff) or die "Failed to unlink $tiff: $!";
-        if (!upload($out)) {
-            die "Failed to upload $out.\n";
+        if ($upload_now) {
+            if (!upload_file($out)) {
+                die "Failed to upload $out (keeping file)\n";
+            }
+            unlink($out);
+        } else {
+            my $qfile = "$queue_dir/$out-unx" . time() . substr($out, -4);
+            print "Moving file from $out to $qfile\n";
+            system("mv", $out, $qfile) and die "Failed to move file.\n";
         }
-        unlink($out);
     }
     exit(0);
 }
@@ -158,7 +180,7 @@ sub upload_file {
     my $file = shift;
     print "Fetching upload URL (for $file) ...\n";
     my $url_to_get_an_upload_url = "$URL/uploadurl?" .
-        "user_email=$EMAIL&password=$PASSWORD";
+        "user_email=$EMAIL&password=" . eurl($password);
     print "Getting an upload URL from: $url_to_get_an_upload_url\n";
     my $upload_url = get($url_to_get_an_upload_url);
     die "Didn't get URL.  Wrong password?\n\nGot: $upload_url\n"
@@ -167,10 +189,15 @@ sub upload_file {
     print "Uploading to: $upload_url ...\n";
     my $rv = system("curl",
                     "-F", "file=\@$file",
-                    "-F", "password=$PASSWORD",
+                    "-F", "password=$password",
                     "-F", "user_email=$EMAIL",
                     $upload_url);
-    return $rv == 0;
+    if ($rv == 0) {
+        print "Upload of $file: success.\n";
+        return 1;
+    }
+    print "Upload of $file failed.\n";
+    return 0;
 }
 
 sub be_batch_scan_script {
@@ -190,3 +217,17 @@ sub be_batch_scan_script {
     unlink($ARGV[0]);
 }
 
+sub eurl {
+    my $a = $_[0];
+    $a =~ s/([^a-zA-Z0-9_\,\-.\/\\\: ])/uc sprintf("%%%02x",ord($1))/eg;
+    $a =~ tr/ /+/;
+    return $a;
+}
+
+sub slurp {
+    my $file = shift;
+    open(my $fh, $file) or return undef;
+    my $contents = do { local $/; <$fh>; };
+    chomp $contents;
+    return $contents;
+}
