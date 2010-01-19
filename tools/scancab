@@ -55,6 +55,7 @@ my $color = 0;
 my $lineart = 0;
 my $appid = $ENV{'SCANCAB_APPID'};
 my $upload_now = 0;
+my $duplex = 0;
 
 die unless GetOptions(
     "appid=s" => \$appid,
@@ -69,6 +70,7 @@ die unless GetOptions(
 
     # Use the auto-document-feeder.
     "adf" => \$adf,
+    "duplex" => \$duplex,
 
     # Mutually exclusive:
     "color" => \$color,
@@ -150,9 +152,11 @@ if ($scan) {
 
     my $mode = $lineart ? "Lineart" : ($color ? "Color" : "Gray");
     if ($adf) {
+        my $extra_source = $duplex ? " --source=\"ADF Duplex\"" : "";
         system("scanadf --mode $mode --resolution 300 " .
+               $extra_source .
                "  --scan-script $0 " .
-               "  --batch-scan=yes -s $n") and die "Failed to batch scan.";
+               "  -s $n") and die "Failed to batch scan.";
     } else {
         system("scanimage --mode $mode --resolution 300 --format tiff > $tiff")
             and die "Failed to scan.";
