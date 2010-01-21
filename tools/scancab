@@ -151,6 +151,9 @@ if ($scan) {
     my $tiff = "$base.tiff";
 
     my $mode = $lineart ? "Lineart" : ($color ? "Color" : "Gray");
+    if ($lineart) {
+        $ENV{SCAN_LINEART} = 1;  # to pass to subprocess
+    }
     if ($adf) {
         my $extra_source = $duplex ? " --source=\"ADF Duplex\"" : "";
         system("scanadf --mode $mode --resolution 300 " .
@@ -211,6 +214,9 @@ sub be_batch_scan_script {
     print "[$$] Got format: $ENV{SCAN_FORMAT} for $filebase\n";
 
     my $ext = "jpg";
+    if ($ENV{SCAN_LINEART}) {
+        $ext = "png";
+    }
 
     my $now = time();
     my $tmp_file  = "$queue_dir/$filebase-unx$now-TMP.$ext";
