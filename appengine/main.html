@@ -21,6 +21,24 @@
 
 {% block main_body %}
 
+{% if media %}
+<h2>Un-annotated raw scans</h2>
+    <form method='POST' action='/makedoc' />
+    <input type='submit' value='Make doc from selected' />
+    <div id='scans'>
+    {% for item in media %}
+      <div style='margin: 1em; float:left; height: auto'>
+        <div style='display: block'>
+          <input type='checkbox' id='check_{{item.key.id}}' name="media_id" value="{{item.key}}" />
+          [<a target=_blank href="{{item.url_resize}}800">larger</a>]<br/>
+          <label for='check_{{item.key.id}}'><img src="{{item.thumb_url}}" /></label>
+        </div>
+      </div>
+    {% endfor %}
+    </div> <!-- scans -->
+    </form>
+{% endif %}
+
 <h2>Documents</h2>
 <form method='GET'>
 <div>Tag search: <input type='text' size='50' name='tags' /> <input type='submit' value='Search' /> (comma-separated union)</div>
@@ -73,25 +91,5 @@
 
 {%  endif %}
 <!---- /Docs without tags --->
-
-<h2>Un-annotated raw scans</h2>
-  {% if media %}
-    <form method='POST' action='/makedoc' />
-    <input type='submit' value='Make doc from selected' />
-    <div id='scans'>
-    {% for item in media %}
-      <div style='margin: 1em; float:left; height: auto'>
-        <div style='display: block'>
-          <input type='checkbox' id='check_{{item.key.id}}' name="media_id" value="{{item.key}}" />
-          [<a target=_blank href="{{item.url_resize}}800">larger</a>]<br/>
-          <label for='check_{{item.key.id}}'><img src="{{item.thumb_url}}" /></label>
-        </div>
-      </div>
-    {% endfor %}
-    </div> <!-- scans -->
-    </form>
-  {% else %}
-      No raw scans to tag.
-  {% endif %}
 
 {% endblock %}
