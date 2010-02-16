@@ -7,12 +7,15 @@
 # needs.  I wrote it for me.  This is hacky and I don't offer support.
 # I do, however, accept gushing emails of full of love.
 #
+# ============
 # Basic usage:
+# ============
 #
 #   (Load scanner full of documents)
 #   $ scancab --adf
 #   $ scancab --adf --color
 #   $ scancab --adf --lineart
+#   $ scancab --duplex          (both sides.  implies --adf)
 #
 #   Those commands above just write to the queue directory.
 #   Make sure you mkdir ~/scancab-queue
@@ -26,6 +29,12 @@
 #   (Upload a certain document, but don't delete it...)
 #   $ scancab --upload=foo.jpg
 #
+# =================
+# Scanner Advice...
+# =================
+# I can't say enough good things about my Fujitsu ScanSnap S1500M
+# (identical to S1500).  Great, fast hardware, great Linux support.
+# A++.  Would buy again.
 
 use strict;
 use LWP::Simple;
@@ -77,6 +86,8 @@ die unless GetOptions(
     "color" => \$color,
     "lineart" => \$lineart,
     );
+
+$adf = 1 if $duplex;
 
 die "Can't do both color and lineart.\n" if $color && $lineart;
 
