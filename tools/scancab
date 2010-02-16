@@ -100,9 +100,14 @@ if ($upload_loop) {
     chdir($queue_dir) or die "Failed to chdir to queue directory $queue_dir.\n";
     while (1) {
         opendir(my $dh, ".") or die;
-        my %create_time;
+        my %create_time;  # filename -> unixtime
         my @files = grep { /^image-.+-unx(\d+)\.(png|jpg)$/ && ($create_time{$_} = $1) } readdir($dh);
-        @files = sort { $create_time{$a} <=> $create_time{$b} } @files;
+
+        # Note: need the fallback on ($a cmp $b) because my Fujitsu
+        # ScanSnap S1500M is so damn fast, that sometimes files all
+        # have the same unixtime(!):
+        @files = sort { ($create_time{$a} <=> $create_time{$b}) || ($a cmp $b) } @files;
+
         closedir($dh);
         if (@files) {
             my $failures;
@@ -162,8 +167,9 @@ if ($scan) {
                "  --scan-script $0 " .
                "  -s $n") and die "Failed to batch scan.";
     } else {
-        system("scanimage --mode $mode --resolution 300 --format tiff > $tiff")
-            and die "Failed to scan.";
+        my $cmd = "scanimage --mode $mode --resolution 300 --format tiff > $tiff";
+        system($cmd)
+            and die "Failed to scan while running:\n  $cmd\n";
 
         my $out = $lineart ? "$base.png" : "$base.jpg";
         print "Scanned.  Converting $tiff -> $out\n";
