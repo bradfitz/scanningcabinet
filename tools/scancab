@@ -30,6 +30,7 @@
 use strict;
 use LWP::Simple;
 use Getopt::Long;
+use IPC::Run ();
 
 my $URL = "http://localhost:8080";
 my $EMAIL = "$ENV{USER}\@gmail.com";  # uh, works for me. :)
@@ -194,14 +195,27 @@ sub upload_file {
         unless $upload_url =~ /^http.+/;
     chomp $upload_url;
     print "Uploading to: $upload_url ...\n";
-    my $rv = system("curl",
-                    "-F", "file=\@$file",
-                    "-F", "password=$password",
-                    "-F", "user_email=$EMAIL",
-                    $upload_url);
-    if ($rv == 0) {
+    my $stdin = "";
+    my ($stdout, $stderr);
+    if (IPC::Run::run(
+            ["curl",
+             "-s", # silent mode
+             "-F", "file=\@$file",
+             "-F", "password=$password",
+             "-F", "user_email=$EMAIL",
+             $upload_url],
+            \$stdin,
+            \$stdout,
+            \$stderr) && !$stdout && !$stderr) {
         print "Upload of $file: success.\n";
         return 1;
+    }
+    print "Error uploading file: $file\n";
+    if ($stdout) {
+        print "Curl returned unexpected stdout: $stdout";
+    }
+    if ($stderr) {
+        print "Curl returned unexpected stderr: $stderr";
     }
     print "Upload of $file failed.\n";
     return 0;
