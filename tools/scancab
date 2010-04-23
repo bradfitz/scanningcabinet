@@ -40,6 +40,7 @@ use strict;
 use LWP::Simple;
 use Getopt::Long;
 use IPC::Run ();
+use File::Spec::Functions qw(tmpdir catdir catfile);
 
 my $URL = "http://localhost:8080";
 my $EMAIL = "$ENV{USER}\@gmail.com";  # uh, works for me. :)
@@ -141,8 +142,22 @@ if ($upload_loop) {
 if ($upload_file) {
     die "File $upload_file doesn't exist.\n" unless -e $upload_file;
     print "Uploading $upload_file ...\n";
-    if (!upload_file($upload_file)) {
-        die "Failed to upload.\n";
+    if ($upload_file =~ /\.pdf/i) {
+        my $tmp = tmpdir();
+        my $cnt = pdf_page_count($upload_file);
+        for (my $pg = 0; $pg < $cnt; $pg++) {
+            printf "   page %04d of %04d\n", $pg + 1, $cnt;
+            my $tiff = catfile($tmp, sprintf("page$$-%04d.tiff", $pg + 1));
+            system('convert', '-density', '300', "$upload_file\[$pg\]", $tiff);
+            if (!upload_file($tiff)) {
+               die "Failed to upload.\n";
+            }
+            unlink $tiff;
+        }
+    } else {
+        if (!upload_file($upload_file)) {
+            die "Failed to upload.\n";
+        }
     }
     exit(0);
 }
@@ -272,4 +287,15 @@ sub slurp {
     my $contents = do { local $/; <$fh>; };
     chomp $contents;
     return $contents;
+}
+
+sub pdf_page_count {
+    my $file = shift;
+    my $pages;
+    open(my $fh, '-|', 'pdfinfo', $file) or die "Cannot run pdfinfo: $!\n";
+    while (<$fh>) {
+        $pages = $1 if /^Pages:\s*(\d+)$/i;
+    }
+    close $fh;
+    return $pages;
 }
