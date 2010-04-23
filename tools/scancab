@@ -145,12 +145,16 @@ if ($upload_file) {
     die "File $upload_file doesn't exist.\n" unless -e $upload_file;
     print "Uploading $upload_file ...\n";
     if ($upload_file =~ /\.pdf/i) {
+        my @pdf_to_tiff = qw(convert);
+        push @pdf_to_tiff, qw(-density 300);
+        push @pdf_to_tiff, qw(-compress lzw);
+        push @pdf_to_tiff, qw(-monochrome) unless $color;
         my $tmp = tmpdir();
         my $cnt = pdf_page_count($upload_file);
         for (my $pg = 0; $pg < $cnt; $pg++) {
             printf "   page %04d of %04d\n", $pg + 1, $cnt;
             my $tiff = catfile($tmp, sprintf("page$$-%04d.tiff", $pg + 1));
-            system('convert', '-density', '300', "$upload_file\[$pg\]", $tiff);
+            system(@pdf_to_tiff, "$upload_file\[$pg\]", $tiff) == 0 or die "Cannot convert page\n";
             if (!upload_file($tiff)) {
                die "Failed to upload.\n";
             }
