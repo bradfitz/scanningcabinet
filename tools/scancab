@@ -93,7 +93,7 @@ $adf = 1 if $duplex;
 die "Can't do both color and lineart.\n" if $color && $lineart;
 
 die "appid parameter must be just an appengine appid"
-    if $appid && $appid !~ /^\w+$/;
+    if $appid && $appid !~ /^[\w-]+$/;
 
 # ADF mode doesn't need to upload (just drops stuff into a batch directory) so
 # don't need to setup URL or password in that case.
