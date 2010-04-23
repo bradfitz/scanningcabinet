@@ -43,7 +43,7 @@ use IPC::Run ();
 use File::Spec::Functions qw(tmpdir catdir catfile);
 
 my $URL = "http://localhost:8080";
-my $EMAIL = "$ENV{USER}\@gmail.com";  # uh, works for me. :)
+my $EMAIL = "";
 my $password = "";
 
 my $uploader_pid_file = "";
@@ -102,12 +102,14 @@ unless ($adf) {
     my $conf_dir = "$ENV{HOME}/.config/scanningcabinet";
     $appid ||= slurp("$conf_dir/appid")
         or warn "No appid configured in $conf_dir/appid; assuming $URL\n";
+    $EMAIL ||= slurp("$conf_dir/email");
     $password ||= slurp("$conf_dir/password")
         or die "No password configured in args or in $conf_dir/password\n";
     if ($appid) {
         $URL = "https://$appid.appspot.com";
     }
 }
+$EMAIL ||= "$ENV{USER}\@gmail.com";  # uh, works for me. :)
 
 if ($upload_loop) {
     chdir($queue_dir) or die "Failed to chdir to queue directory $queue_dir.\n";
