@@ -69,6 +69,7 @@ my $duplex = 0;
 
 die unless GetOptions(
     "appid=s" => \$appid,
+    "email=s" => \$EMAIL,
     "password=s" => \$password,
 
     # Upload this file, don't delete it, then exit.
