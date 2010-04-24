@@ -450,6 +450,40 @@ class ResourceHandler(blobstore_handlers.BlobstoreDownloadHandler):
     self.send_blob(blob_key, str(media_object.guessed_type))
 
 
+class GarbageCollectMediaHandler1(webapp.RequestHandler):
+  def get(self):
+    if not users.is_current_user_admin():
+      self.redirect('/?error_message=%s' % 'log-in required')
+
+    used = set()
+    for d in Document.all():
+      used |= set(d.pages)
+
+    dead = dict()
+    for i in MediaObject.all():
+      if i.key() not in used:
+        dead[i.key()] = i
+
+    for k in dead:
+      dead[k].delete()
+
+    self.redirect('/')
+
+class GarbageCollectMediaHandler2(webapp.RequestHandler):
+  def get(self):
+    if not users.is_current_user_admin():
+      self.redirect('/?error_message=%s' % 'log-in required')
+
+    used = set()
+    for i in MediaObject.all():
+      used.add(i.blob.key())
+
+    for b in blobstore.BlobInfo.all():
+      if b.key() not in used:
+        b.delete()
+
+    self.redirect('/')
+
 def main():
   application = webapp.WSGIApplication(
       [('/', MainHandler),
@@ -460,6 +494,8 @@ def main():
        ('/doc/(\d+)', ShowDocHandler),
        ('/changedoc', ChangeDocHandler),
        ('/resource/(\d+)(/.*)?', ResourceHandler),
+       #('/gc_media1', GarbageCollectMediaHandler1),
+       #('/gc_media2', GarbageCollectMediaHandler2),
        ],
                                        debug=True)
   wsgiref.handlers.CGIHandler().run(application)
