@@ -147,9 +147,13 @@ if ($upload_file) {
     if ($upload_file =~ /\.pdf/i) {
         my $type = $color ? 'jpg' : 'tiff';
         my @pdf_to_img = qw(convert);
-        push @pdf_to_img, qw(-density 300);
-        push @pdf_to_img, qw(-compress lzw) if $type eq 'tiff';
-        push @pdf_to_img, qw(-monochrome) unless $color;
+        if ($type eq 'tiff') {
+            push @pdf_to_img, qw(-monochrome);
+            push @pdf_to_img, qw(-density 150);
+            push @pdf_to_img, qw(-compress lzw);
+        } elsif ($type eq 'jpg') {
+            push @pdf_to_img, qw(-density 300);
+        }
         my $tmp = tmpdir();
         my $cnt = pdf_page_count($upload_file);
         for (my $pg = 0; $pg < $cnt; $pg++) {
