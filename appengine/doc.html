@@ -32,13 +32,12 @@
   {% if show_single_list %}
     <center>
       {% for page in pages %}
-        *<br/>
-        <img src="{{page.url_resize}}{{size}}" /><br/>
+        <img src="{{page.url_resize}}{{size}}" class="doc-page-single" /><br />
       {% endfor %}
     </center>
   {% else %}
       {% for page in pages %}
-        <img src="{{page.url_resize}}{{size}}" />
+        <img src="{{page.url_resize}}{{size}}" class="doc-page-row" />
       {% endfor %}
   {% endif %}
 {% endblock %}
