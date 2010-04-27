@@ -50,8 +50,8 @@
     <ul>
     {% for doc in docs %}
       <li><b>
-        <a href="{{doc.display_url}}">"{{doc.some_title}}" -</a>
-      </b> {{doc.description}}
+        <a href="{{doc.display_url}}">{{doc.some_title}}</a>
+      </b>{% if doc.description %} ({{doc.description}}){% endif %}
       </li>
     {% endfor %}
     </ul>
@@ -68,8 +68,9 @@
     <ul>
     {% for doc in upcoming_due_docs %}
       <li><b>{{doc.due_yyyy_mm_dd}}</b> -- 
-        <a href="{{doc.display_url}}">"{{doc.some_title}}" -</a>
-      </b> {{doc.description}}
+        <a href="{{doc.display_url}}">{{doc.some_title}}</a>
+      </b>{% if doc.description %} ({{doc.description}}){% endif %}
+      </li>
       </li>
     {% endfor %}
     </ul>
@@ -84,8 +85,8 @@
     <ul>
     {% for doc in untagged_docs %}
       <li><b>
-        <a href="{{doc.display_url}}">"{{doc.some_title}}" -</a>
-      </b> {{doc.description}}
+        <a href="{{doc.display_url}}">{{doc.some_title}}</a>
+      </b>{% if doc.description %} ({{doc.description}}){% endif %}
       </li>
     {% endfor %}
     </ul>
