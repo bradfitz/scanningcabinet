@@ -10,7 +10,7 @@
 <body>
   <div align="right" style='float: right'>
     {% if user_info %}
-      {{user_info.user.email}}!
+      <b>{{user_info.user.email}}</b> |
     {% endif %}
 
     <a href="{{login_url}}">
