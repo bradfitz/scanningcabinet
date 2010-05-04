@@ -51,7 +51,7 @@
     {% for doc in docs %}
       <li><b>
         <a href="{{doc.display_url}}">{{doc.some_title}}</a>
-      </b>{% if doc.description %} ({{doc.description}}){% endif %}
+      </b> [{{doc.date_yyyy_mm_dd}}]{% if doc.description %} ({{doc.description}}){% endif %}
       </li>
     {% endfor %}
     </ul>
