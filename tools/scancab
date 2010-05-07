@@ -230,15 +230,13 @@ if ($scan) {
 
 sub upload_file {
     my $file = shift;
-    print "Fetching upload URL (for $file) ...\n";
     my $url_to_get_an_upload_url = "$URL/uploadurl?" .
         "user_email=$EMAIL&password=" . eurl($password);
-    print "Getting an upload URL from: $url_to_get_an_upload_url\n";
     my $upload_url = get($url_to_get_an_upload_url);
     die "Didn't get URL.  Wrong password?\n\nGot: $upload_url\n"
         unless $upload_url =~ /^http.+/;
     chomp $upload_url;
-    print "Uploading to: $upload_url ...\n";
+    print "Uploading $file ...\n";
     my $stdin = "";
     my ($stdout, $stderr);
     if (IPC::Run::run(
@@ -251,7 +249,6 @@ sub upload_file {
             \$stdin,
             \$stdout,
             \$stderr) && !$stdout && !$stderr) {
-        print "Upload of $file: success.\n";
         return 1;
     }
     print "Error uploading file: $file\n";
