@@ -222,7 +222,7 @@ if ($scan) {
         } else {
             my $qfile = "$queue_dir/$out-unx" . time() . substr($out, -4);
             print "Moving file from $out to $qfile\n";
-			rename($out, $qfile) or die "Failed to move file.\n";
+            system("mv", $out, $qfile) and die "Failed to move file.\n";
         }
     }
     exit(0);
