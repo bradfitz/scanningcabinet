@@ -184,6 +184,23 @@ class UploadFormHandler(webapp.RequestHandler):
                                             locals(),
                                             debug=True))
 
+
+def lookup_and_authenticate_user(handler, claimed_email, claimed_password):
+  if not claimed_email:
+    return None
+  claimed_user = UserInfo.get_by_key_name('user:%s' % claimed_email)
+  if not claimed_user:
+    return None
+  if claimed_email == 'test@example.com' and \
+        handler.request.headers["Host"] == "localhost:8080":
+    # No auth for testing.
+    return claimed_user
+  if claimed_user.upload_password and \
+        claimed_user.upload_password == claimed_password:
+    return claimed_user
+  return None
+
+
 class UploadUrlHandler(webapp.RequestHandler):
   """Handler to return a URL for a script to get an upload URL.
 
@@ -192,14 +209,9 @@ class UploadUrlHandler(webapp.RequestHandler):
   """
 
   def get(self):
-    effective_user = None
     claimed_email = self.request.get("user_email")
-    if claimed_email:
-      claimed_user = UserInfo.get_by_key_name('user:%s' % claimed_email)
-      if claimed_user and \
-         claimed_user.upload_password and \
-         claimed_user.upload_password == self.request.get("password"):
-        effective_user = claimed_user
+    effective_user = lookup_and_authenticate_user(self, claimed_email,
+                                                  self.request.get("password"))
 
     if effective_user:
       self.response.headers['Content-Type'] = 'text/plain'
@@ -258,18 +270,11 @@ class UploadPostHandler(blobstore_handlers.BlobstoreUploadHandler):
     user = users.get_current_user()
     user_email = ''
     if user is None:
-      effective_user = None
       claimed_email = get_param("user_email")
-      if claimed_email:
-        claimed_user = UserInfo.get_by_key_name('user:%s' % claimed_email)
-        if claimed_user and \
-           claimed_user.upload_password and \
-           claimed_user.upload_password == get_param('password'):
-          effective_user = claimed_user
-          user_email = claimed_email
-      
+      effective_user = lookup_and_authenticate_user(self, claimed_email, get_param('password'))
       if not effective_user:
         error_messages.append("No user or correct 'password' argument.")
+      user_email = claimed_email
     else:
       user_email = user.email()
 
