@@ -21,7 +21,12 @@
 
 {% block main_body %}
 
-{% if media %}
+<h2>Search</h2>
+<form method='GET'>
+<div>Tag search: <input type='text' size='50' name='tags' /> <input type='submit' value='Search' /> (comma-separated union)</div>
+</form>
+
+{% if media and not did_search %}
 <h2>Un-annotated raw scans</h2>
     <form method='POST' action='/makedoc' />
     <input type='submit' value='Make doc from selected' />
@@ -41,10 +46,6 @@
 {% endif %}
 
 <h2>Documents</h2>
-<form method='GET'>
-<div>Tag search: <input type='text' size='50' name='tags' /> <input type='submit' value='Search' /> (comma-separated union)</div>
-
-</form>
 
 {% if docs %}
     <ul>

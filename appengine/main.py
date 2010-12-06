@@ -98,6 +98,7 @@ class MainHandler(webapp.RequestHandler):
     # Collect list of error messages which gets shown to the user.
     error_messages = self.request.params.getall('error_message')
     view_user = user_info  # for now
+    did_search = False
 
     # Fetch media for view user.
     if user_info is None:
@@ -109,10 +110,11 @@ class MainHandler(webapp.RequestHandler):
       media = MediaObject.all().filter('owner', user_info)
       media = media.filter('lacks_document', True)
       media = media.order('creation')
-      media = media.fetch(30)
+      media = media.fetch(50)
       docs = Document.all().filter('owner', user_info)
       tags = self.request.get("tags")
       if tags:
+        did_search = True
         for tag in re.split('\s*,\s*', tags):
           docs = docs.filter("tags", tag)
       docs = docs.fetch(50)
@@ -131,6 +133,7 @@ class MainHandler(webapp.RequestHandler):
 
     # Render view.
     self.response.out.write(template.render('main.html', {
+        "did_search": did_search,
         "media": media,
         "docs": docs,
         "untagged_docs": untagged_docs,
@@ -163,6 +166,7 @@ class MakeDocHandler(webapp.RequestHandler):
         db.put(scan)
     db.run_in_transaction(make_doc)
     self.redirect(doc.display_url + "?size=1200")
+
 
 class UploadFormHandler(webapp.RequestHandler):
   """Handler to display the media object upload page.
@@ -370,6 +374,35 @@ class ShowDocHandler(webapp.RequestHandler):
                                             debug=True))
 
 
+def break_and_delete_doc(user, doc):
+  """Deletes the document, marking all the images in it as un-annotated."""
+  def tx():
+    db.delete(doc)
+    scans = MediaObject.get(doc.pages)
+    for scan in scans:
+      scan.lacks_document = True
+      scan.document = None
+      db.put(scan)
+  db.run_in_transaction(tx)
+  return True
+
+
+def delete_doc_and_images(user, doc):
+  """Deletes the document and its images."""
+  scans = MediaObject.get(doc.pages)
+  for scan in scans:
+    blobstore.delete(scan.blob.key())
+  def tx():
+    db.delete(doc)
+    scans = MediaObject.get(doc.pages)
+    for scan in scans:
+      user.media_objects -= 1
+      db.delete(scan)
+    db.put(user)
+  db.run_in_transaction(tx)
+  return True
+
+
 class ChangeDocHandler(webapp.RequestHandler):
   def post(self):
     user_info = get_user_info()
@@ -379,6 +412,16 @@ class ChangeDocHandler(webapp.RequestHandler):
     doc = Document.get_by_id(docid, parent=user_info)
     if doc is None:
       self.response.out.write("Docid %d not found." % (docid))
+      return
+
+    mode = self.request.get("mode")
+    if mode == "break":
+      break_and_delete_doc(user_info, doc)
+      self.response.out.write("[&lt;&lt; <a href='/'>Back</a>] Docid %d deleted and images broken out as un-annotated." % docid)
+      return
+    if mode == "delete":
+      delete_doc_and_images(user_info, doc)
+      self.response.out.write("[&lt;&lt; <a href='/'>Back</a>] Docid %d and its images deleted." % docid)
       return
 
     # Simple properties:

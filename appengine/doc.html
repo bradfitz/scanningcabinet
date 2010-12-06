@@ -25,7 +25,16 @@
            value="{% if doc.physical_location %}{{doc.physical_location|escape}}{% endif %}" size=60 />
            (of physical document)</td>
   </tr>
-  <tr><td></td><td><input type='submit' value="Save" /></tr>
+  <tr>
+    <td></td>
+    <td><input type='submit' value="Save" />
+      Other action: <select name='mode'>
+        <option value="">(other options)</option>
+        <option value="break">Break; delete doc, keep images</option>
+        <option value="delete">Delete; delete doc &amp; images</option>
+      </select>
+    </td>
+  </tr>
 </table>
 </form>
 
