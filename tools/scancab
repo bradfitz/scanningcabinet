@@ -67,8 +67,11 @@ my $lineart = 0;
 my $appid = $ENV{'SCANCAB_APPID'};
 my $upload_now = 0;
 my $duplex = 0;
+my $dev = 0;
 
 die unless GetOptions(
+    "dev" => \$dev,   # dev_appserver mode
+
     "appid=s" => \$appid,
     "email=s" => \$EMAIL,
     "password=s" => \$password,
@@ -96,20 +99,28 @@ die "Can't do both color and lineart.\n" if $color && $lineart;
 die "appid parameter must be just an appengine appid"
     if $appid && $appid !~ /^[\w-]+$/;
 
-# ADF mode doesn't need to upload (just drops stuff into a batch directory) so
-# don't need to setup URL or password in that case.
-unless ($adf) {
-    my $conf_dir = "$ENV{HOME}/.config/scanningcabinet";
-    $appid ||= slurp("$conf_dir/appid")
-        or warn "No appid configured in $conf_dir/appid; assuming $URL\n";
-    $EMAIL ||= slurp("$conf_dir/email");
-    $password ||= slurp("$conf_dir/password")
-        or die "No password configured in args or in $conf_dir/password\n";
-    if ($appid) {
-        $URL = "https://$appid.appspot.com";
+if ($dev) {
+    $URL = "http://localhost:8080";
+    $EMAIL = "test\@example.com";
+    $password = "test";
+    $queue_dir = "/tmp/scancab-queue";
+    mkdir $queue_dir, 0755 unless -d $queue_dir;
+} else {
+    # ADF mode doesn't need to upload (just drops stuff into a batch directory) so
+    # don't need to setup URL or password in that case.
+    unless ($adf) {
+        my $conf_dir = "$ENV{HOME}/.config/scanningcabinet";
+        $appid ||= slurp("$conf_dir/appid")
+            or warn "No appid configured in $conf_dir/appid; assuming $URL\n";
+        $EMAIL ||= slurp("$conf_dir/email");
+        $password ||= slurp("$conf_dir/password")
+            or die "No password configured in args or in $conf_dir/password\n";
+        if ($appid) {
+            $URL = "https://$appid.appspot.com";
+        }
     }
+    $EMAIL ||= "$ENV{USER}\@gmail.com";  # uh, works for me. :)
 }
-$EMAIL ||= "$ENV{USER}\@gmail.com";  # uh, works for me. :)
 
 if ($upload_loop) {
     chdir($queue_dir) or die "Failed to chdir to queue directory $queue_dir.\n";
