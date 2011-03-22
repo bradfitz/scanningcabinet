@@ -110,16 +110,20 @@ class MainHandler(webapp.RequestHandler):
       media = MediaObject.all().filter('owner', user_info)
       media = media.filter('lacks_document', True)
       media = media.order('creation')
-      media = media.fetch(50)
+      limit = 50
+      if self.request.get("limit"):
+        limit = long(self.request.get("limit"))
+      media = media.fetch(limit)
+
       docs = Document.all().filter('owner', user_info)
       tags = self.request.get("tags")
       if tags:
         did_search = True
         for tag in re.split('\s*,\s*', tags):
           docs = docs.filter("tags", tag)
-      docs = docs.fetch(50)
+      docs = docs.fetch(limit)
 
-      untagged_docs = Document.all().filter('owner', user_info).filter("no_tags", True).fetch(50)
+      untagged_docs = Document.all().filter('owner', user_info).filter("no_tags", True).fetch(limit)
 
       upcoming_due = Document.all().filter('owner', user_info)
       upcoming_due = upcoming_due.filter("due_date !=", None)
