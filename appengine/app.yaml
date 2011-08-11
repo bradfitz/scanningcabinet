@@ -17,5 +17,6 @@ handlers:
   script: main.py
 
 - url: .*
+  login: required
   script: main.py
 

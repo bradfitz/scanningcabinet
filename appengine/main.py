@@ -70,8 +70,25 @@ def get_user_info():
   user = users.get_current_user()
   if user is None:
     return None
+  auth_email = user.email()
+  effective_email = auth_email
+
+  if auth_email == 'brother@example.com':
+    effective_email = 'test@example.com'
+  if auth_email == 'cole@fitzpat.com':
+    effective_email = 'bradfitz@gmail.com'
+
+  if auth_email == effective_email:
+    ui = UserInfo.get_or_insert(key_name='user:%s' % auth_email)
   else:
-    return UserInfo.get_or_insert(key_name='user:%s' % user.email())
+    ui = UserInfo.get_by_key_name('user:%s' % effective_email)
+    if not ui:
+      logging.error("User %s failed to act as %s; %s doesn't exist", auth_email, effective_email, effective_email)
+      return None
+    logging.info("User %s acting as %s", auth_email, effective_email)
+    ui.non_owner = True
+    ui.real_email = auth_email
+  return ui
 
 
 class MainHandler(webapp.RequestHandler):
@@ -101,34 +118,28 @@ class MainHandler(webapp.RequestHandler):
     did_search = False
 
     # Fetch media for view user.
-    if user_info is None:
-      media = []
-      docs = []
-      untagged_docs = []
-      upcoming_due = []
-    else:
-      media = MediaObject.all().filter('owner', user_info)
-      media = media.filter('lacks_document', True)
-      media = media.order('creation')
-      limit = 50
-      if self.request.get("limit"):
-        limit = long(self.request.get("limit"))
-      media = media.fetch(limit)
+    media = MediaObject.all().filter('owner', user_info)
+    media = media.filter('lacks_document', True)
+    media = media.order('creation')
+    limit = 50
+    if self.request.get("limit"):
+      limit = long(self.request.get("limit"))
+    media = media.fetch(limit)
 
-      docs = Document.all().filter('owner', user_info)
-      tags = self.request.get("tags")
-      if tags:
-        did_search = True
-        for tag in re.split('\s*,\s*', tags):
-          docs = docs.filter("tags", tag)
-      docs = docs.fetch(limit)
+    docs = Document.all().filter('owner', user_info)
+    tags = self.request.get("tags")
+    if tags:
+      did_search = True
+      for tag in re.split('\s*,\s*', tags):
+        docs = docs.filter("tags", tag)
+    docs = docs.fetch(limit)
 
-      untagged_docs = Document.all().filter('owner', user_info).filter("no_tags", True).fetch(limit)
+    untagged_docs = Document.all().filter('owner', user_info).filter("no_tags", True).fetch(limit)
 
-      upcoming_due = Document.all().filter('owner', user_info)
-      upcoming_due = upcoming_due.filter("due_date !=", None)
-      upcoming_due = upcoming_due.order("due_date")
-      upcoming_due = upcoming_due.fetch(30)
+    upcoming_due = Document.all().filter('owner', user_info)
+    upcoming_due = upcoming_due.filter("due_date !=", None)
+    upcoming_due = upcoming_due.order("due_date")
+    upcoming_due = upcoming_due.fetch(30)
 
     top_message = ""
     if self.request.get("saved_doc"):

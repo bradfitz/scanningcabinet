@@ -10,6 +10,9 @@
 <body>
   <div align="right" style='float: right'>
     {% if user_info %}
+      {% if user_info.non_owner %}
+         {{user_info.real_email}}, acting as 
+      {% endif %}
       <b>{{user_info.user.email}}</b> |
     {% endif %}
 

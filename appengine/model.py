@@ -64,6 +64,10 @@ class UserInfo(db.Model):
   media_objects = db.IntegerProperty(default=0)
   upload_password = db.StringProperty()
 
+  # non_owner is set if a helper (e.g. Brad's brother) is helping him
+  # tag
+  non_owner = False
+  real_email = ""    # real user's email
 
 class Document(db.Model):
   """A document with 1 or more media objects (1+ pages, 0/1 preview)"""
