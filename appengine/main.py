@@ -481,7 +481,7 @@ class ResourceHandler(blobstore_handlers.BlobstoreDownloadHandler):
       return
 
     last_modified_string = media_object.creation.strftime("%a, %d %b %Y %H:%M:%S GMT")
-    self.response.headers['Cache-Control'] = "public, max-age=31536000"
+    self.response.headers['Cache-Control'] = "private"
     self.response.headers['Content-Type'] = str(media_object.guessed_type)
     self.response.headers['Last-Modified'] = last_modified_string
     expires = media_object.creation + datetime.timedelta(days=30)
