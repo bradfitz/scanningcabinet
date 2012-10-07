@@ -16,6 +16,9 @@ handlers:
 - url: /post
   script: main.py
 
+- url: /uploadurl.*
+  script: main.py
+
 - url: .*
   login: required
   script: main.py
