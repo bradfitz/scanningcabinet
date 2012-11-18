@@ -99,6 +99,10 @@ die "Can't do both color and lineart.\n" if $color && $lineart;
 die "appid parameter must be just an appengine appid"
     if $appid && $appid !~ /^[\w-]+$/;
 
+my $conf_dir = "$ENV{HOME}/.config/scanningcabinet";
+my $device = slurp("$conf_dir/device");
+my $device_flag = $device ? "-d $device" : "";
+
 if ($dev) {
     $URL = "http://localhost:8080";
     $EMAIL = "test\@example.com";
@@ -106,10 +110,12 @@ if ($dev) {
     $queue_dir = "/tmp/scancab-queue";
     mkdir $queue_dir, 0755 unless -d $queue_dir;
 } else {
+    unless (-d $queue_dir) {
+        die "Queue directory doesn't exist; please create it: $queue_dir\n";
+    }
     # ADF mode doesn't need to upload (just drops stuff into a batch directory) so
     # don't need to setup URL or password in that case.
     unless ($adf) {
-        my $conf_dir = "$ENV{HOME}/.config/scanningcabinet";
         $appid ||= slurp("$conf_dir/appid")
             or warn "No appid configured in $conf_dir/appid; assuming $URL\n";
         $EMAIL ||= slurp("$conf_dir/email");
@@ -211,12 +217,12 @@ if ($scan) {
     }
     if ($adf) {
         my $extra_source = $duplex ? " --source=\"ADF Duplex\"" : "";
-        system("scanadf --mode $mode --resolution 300 " .
+        system("scanadf $device_flag --mode $mode --resolution 300 " .
                $extra_source .
                "  --scan-script $0 " .
                "  -s $n") and die "Failed to batch scan.";
     } else {
-        my $cmd = "scanimage --mode $mode --resolution 300 --format tiff > $tiff";
+        my $cmd = "scanimage $device_flag --mode $mode --resolution 300 --format tiff > $tiff";
         system($cmd)
             and die "Failed to scan while running:\n  $cmd\n";
 
@@ -246,7 +252,7 @@ sub upload_file {
         "user_email=$EMAIL&password=" . eurl($password);
     print "Getting an upload URL from: $url_to_get_an_upload_url\n";
     my $upload_url = get($url_to_get_an_upload_url);
-    die "Didn't get URL.  Wrong password?\n\nGot: $upload_url\n"
+    die "Didn't get URL.  Wrong password?\n\nGot: $upload_url ($@)\n"
         unless $upload_url =~ /^http.+/;
     chomp $upload_url;
     print "Uploading to: $upload_url ...\n";
