@@ -1,3 +1,18 @@
+################################################################################
+#
+# NOTICE: unmaintained! As of 2015-05-03 I no longer use this App Engine-based
+# version of Scanning Cabinet.
+#
+# The migration of my App Engine instance from Master/Slave datastore to HRD
+# failed, so I'm accelerating my plans to move this project to be Camlistore-based
+# instead. See camlistore.org. This will just be a Camlistore app, using its
+# data model.
+#
+# Old README follows.
+#
+################################################################################
+
+
 This is scanningcabinet.
 
 It's my document management system.  Maybe you'll like it too.

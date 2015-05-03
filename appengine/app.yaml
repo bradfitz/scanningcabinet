@@ -2,6 +2,8 @@ application: scanningcabinet
 version: 1
 api_version: 1
 runtime: python
+builtins:
+- remote_api: on
 
 handlers:
 - url: /remote_api
@@ -17,6 +19,9 @@ handlers:
   script: main.py
 
 - url: /uploadurl.*
+  script: main.py
+
+- url: /resource.*
   script: main.py
 
 - url: .*

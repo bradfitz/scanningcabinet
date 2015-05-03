@@ -472,7 +472,25 @@ class ResourceHandler(blobstore_handlers.BlobstoreDownloadHandler):
   """For when user requests media object.  Actually serves blob."""
 
   def get(self, media_id, unused_filename):
+    def get_param(name, error_message=None):
+      """Convenience function to get a parameter from request.
+
+      Returns:
+        String value of field if it exists, else ''.  If the key does not exist
+        at all, it will return None.
+      """
+      try:
+        value = self.request.params[name]
+        if isinstance(value, cgi.FieldStorage):
+          value = value.value
+        return value or ''
+      except KeyError:
+        #error_messages.append(error_message)
+        return None
+
     user_info = get_user_info()
+    #if user_info is None and get_param("password") == "xx":
+    #  user_info = UserInfo.get_by_key_name('user:bradfitz@gmail.com')      
     if user_info is None:
       self.redirect('/?error_message=%s' % 'log-in required')
     media_object = MediaObject.get_by_id(long(media_id), parent=user_info)
@@ -547,6 +565,27 @@ class GarbageCollectMediaHandler2(webapp.RequestHandler):
 
     self.redirect('/')
 
+class DumpHandler(webapp.RequestHandler):
+  def get(self):
+    self.response.headers['Cache-Control'] = "private"
+    self.response.headers['Content-Type'] = "text/plain; charset=utf-8"
+
+    user = UserInfo.get_by_key_name('user:bradfitz@gmail.com')
+
+    docs = Document.all().filter('owner', user)
+    docs = docs.fetch(10000)
+    self.response.out.write("# got %d docs\n" % len(docs))
+    for doc in docs:
+      self.response.out.write("%s tags[%s] date[%s] title[%s] \n" % (doc.display_url, doc.tag_comma_separated, doc.date_yyyy_mm_dd, doc.title_or_empty_string))
+      for page in doc.pages:
+        self.response.out.write(" has_page: %d\n" % (page.id_or_name()))
+    meds = MediaObject.all().filter('owner', user)
+    meds = meds.fetch(10000)
+    self.response.out.write("# got %d mediaobjects\n" % len(meds))
+    for mo in meds:
+      self.response.out.write("%s creation[%s] size[%d]\n" % (mo.url_path, str(mo.creation), mo.size))
+
+
 def main():
   application = webapp.WSGIApplication(
       [('/', MainHandler),
@@ -557,6 +596,7 @@ def main():
        ('/doc/(\d+)', ShowDocHandler),
        ('/changedoc', ChangeDocHandler),
        ('/resource/(\d+)(/.*)?', ResourceHandler),
+       #('/dumpxx', DumpHandler),
        #('/gc_media1', GarbageCollectMediaHandler1),
        #('/gc_media2', GarbageCollectMediaHandler2),
        ],
